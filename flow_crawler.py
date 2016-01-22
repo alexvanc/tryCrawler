@@ -32,14 +32,14 @@ class FlowCrawler(object):
 		q=result["items"][0]
 		user_id=q["owner"]["user_id"]
 		#save question to database
-
+		self.dbconnect.saveQuestion(q)
 		#crawl related user
 		self.crawlUser(user_id)
 		#crawl related comments
 		flag=True
 		page=1
 		while flag:
-			flag=self.crawlComments(True.question_id,page)
+			flag=self.crawlComments(True,question_id,page)
 			page=page+1
 			pass
 		#crawl related answers
@@ -52,7 +52,7 @@ class FlowCrawler(object):
 		pass
 
 	def crawlAnswers(self,question_id,page=1,pagesize=50,order="desc",sort="votes"):
-		url=self.baseUrl+"questions/"+str(question_id)+"?page="+str(page)+"&pagesize="+str(pagesize)+"&order="+order+"&sort="+sort+"&site=stackoverflow&filter=!6JEiSzNSf8Sdk"
+		url=self.baseUrl+"questions/"+str(question_id)+"/answers?page="+str(page)+"&pagesize="+str(pagesize)+"&order="+order+"&sort="+sort+"&site=stackoverflow&filter=!6JEiSzNSf8Sdk"
 		result=self.getContent(url)
 		aList=result["items"]
 		for a in aList:
@@ -65,7 +65,7 @@ class FlowCrawler(object):
 		a=result["items"][0]
 		user_id=a["owner"]["user_id"]
 		#save answer to database
-
+		self.dbconnect.saveAnswer(a)
 		#crawl related user
 		self.crawlUser(user_id)
 		#crawl related comments
@@ -81,37 +81,41 @@ class FlowCrawler(object):
 		url=self.baseUrl+"users/"+str(user_id)+"?site=stackoverflow&filter=!40dOQeE6To4*rN*m("
 		result=self.getContent(url)
 		user=result["items"][0]
+		self.dbconnect.saveUser(user)
 		pass
 
 	def crawlComments(self,of_question,id,page=1,pagesize=50,order="desc",sort="votes"):
-		url=""
+		url=''
 		if of_question:
-			url=self.baseUrl+"questions/"+str(16647069)+"/comments?page="+str(page)+"&pagesize="+str(pagesize)+"order="+order+"&sort="+sort+"&site=stackoverflow&filter=!*Jxe6D(*XyU0OUDw"
+			url=self.baseUrl+"questions/"+str(id)+"/comments?page="+str(page)+"&pagesize="+str(pagesize)+"&order="+order+"&sort="+sort+"&site=stackoverflow&filter=!6JEiSzOmGKjT("
 		else:
-			url=self.baseUrl+"answers/"+str(16048358)+"/comments?page="+str(page)+"&pagesize="+str(pagesize)+"order"=order+"&sort="+sort+"&site=stackoverflow&filter=!*Jxe6D(*XyU0OUDw"	
+			url=self.baseUrl+"answers/"+str(id)+"/comments?page="+str(page)+"&pagesize="+str(pagesize)+"&order="+order+"&sort="+sort+"&site=stackoverflow&filter=!9jPV9tT2s";
 		result=self.getContent(url)
 		cList=result["items"]
 		for c in cList:
-			self.crawlComments(of_question,id)
+			self.crawlComment(of_question,c["comment_id"],id)
 		return result["has_more"]
 
-	def crawlComment(self,of_question,comment_id):
+	def crawlComment(self,of_question,comment_id,id):
 		url=self.baseUrl+"comments/"+str(comment_id)+"?site=stackoverflow&filter=!6JEiSzLdab3D3"
 		result=self.getContent(url)
 		c=result["items"][0]
 		user_id=c["owner"]["user_id"]
 		#save comment to database
-
+		self.dbconnect.saveComment(c)
 		#crawl related user
 		self.crawlUser(user_id)
 		
 
 	def getContent(self,url):
+		print url
 		response=urllib2.urlopen(url)
 		buf=StringIO(response.read())
 		f=gzip.GzipFile(fileobj=buf)
 		data=f.read()
-		return json.loads(data)
+		result=json.loads(data)
+		response.close()
+		return result
 
 		
 
@@ -122,8 +126,19 @@ class DBhelper(object):
 		pass
 	def saveQuestion(self,question):
 		pass
-	def saveAnswer(self):
+	def saveAnswer(self,answer):
 		pass
-	def saveUser(self):
+	def saveComment(self,comment):
+		print comment
 		pass
+	def saveUser(self,user):
+		print user
+	def hasQustion(self,question_id):
+		return False
+	def hasAnswer(self,answer_id):
+		return False
+	def hasUser(self,user_id):
+		return False
+	def hasComment(self,comment_id):
+		return False
 
