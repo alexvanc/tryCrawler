@@ -5,6 +5,7 @@ import MySQLdb
 from StringIO import StringIO
 import gzip
 import json
+import datetime
 
 class FlowCrawler(object):
 	def __init__(self, keyword="docker",dbtype="mysql",dbname="crawler"):
@@ -38,16 +39,18 @@ class FlowCrawler(object):
 		questionObj.id=question['question_id']
 		questionObj.title=question.get('title',"fake")
 		questionObj.body=question.get('body',"fake")
+		questionObj.tag=self.keyword
 		questionObj.tags=question.get('tags',[]) #value type is list
-		questionObj.user_id=question['owner']['user_id']
+		owner=question.get('owner',{})
+		questionObj.user_id=owner.get('user_id',0)
 		questionObj.accepted_answer_id=question.get('accepted_answer_id',-10000)
 		questionObj.view_count=question.get('view_count',-10000)
 		questionObj.answer_count=question.get('answer_count',-10000)
 		questionObj.comment_count=question.get('comment_count',-10000)
 		questionObj.favorite_count=question.get('favorite_count',-10000)
 		questionObj.score=question.get('score',-10000)
-		questionObj.create_time=question['creation_date']
-		questionObj.last_time=question['last_activity_date']
+		questionObj.create_time=changeTSMP2Date(question['creation_date'])
+		questionObj.last_time=changeTSMP2Date(question['last_activity_date'])
 		#save this question to database
 		self.dbHelper.saveQuestion(questionObj)
 		#process the user of this question
@@ -67,11 +70,12 @@ class FlowCrawler(object):
 			answerObj.question_id=answer['question_id']
 			answerObj.body=answer.get('body',"fake")
 			answerObj.is_accepted=answer.get("is_accepted",False)
-			answerObj.user_id=answer['owner']['user_id']
+			owner=answer.get('owner',{})
+			answerObj.user_id=owner.get('user_id',0)
 			answerObj.comment_count=answer.get('comment_count',-10000)
 			answerObj.score=answer.get('score',-10000)
-			answerObj.create_time=answer['creation_date']
-			answerObj.last_time=answer['last_activity_date']
+			answerObj.create_time=changeTSMP2Date(answer['creation_date'])
+			answerObj.last_time=changeTSMP2Date(answer['last_activity_date'])
 			#save this answer to database
 			self.dbHelper.saveAnswer(answerObj)
 			#process the user of this answer
@@ -87,13 +91,16 @@ class FlowCrawler(object):
 			commentObj.post_id=comment['post_id']
 			commentObj.body=comment.get('body','fake')
 			commentObj.score=comment.get('score',-10000)
-			commentObj.create_time=comment['creation_date']
-			commentObj.user_id=comment['owner']['user_id']
+			commentObj.create_time=changeTSMP2Date(comment['creation_date'])
+			owner=comment.get('owner',{})
+			commentObj.user_id=owner.get('user_id',0)
 			commentObj.of_question=of_question
 			if of_question:
 				commentObj.question_id=iid
+				commentObj.answer_id=0
 			else:
 				commentObj.answer_id=iid
+				commentObj.question_id=0
 			#save this comment to database
 			self.dbHelper.saveComment(commentObj)
 			#process the user of this comment
@@ -101,15 +108,17 @@ class FlowCrawler(object):
 	
 	def processUser(self,user):
 		userObj=User()
-		userObj.id=user['user_id']
+		userObj.id=user.get('user_id',0)
+		if userObj.id==0:
+			return False
 		userObj.reputation=user.get('reputation',-10000)
 		userObj.accept_rate=user.get('accept_rate',-10000)
 		userObj.is_employee=user.get('is_employee',False)
 		#userObj.create_time=user['creation_date']
 		badge_counts=user.get('badge_counts',{})
 		userObj.bronze=badge_counts.get('bronze',-10000)
-		userObj.bronze=badge_counts.get('silver',-10000)
-		userObj.bronze=badge_counts.get('gold',-10000)
+		userObj.silver=badge_counts.get('silver',-10000)
+		userObj.gold=badge_counts.get('gold',-10000)
 		#save this user to database
 		self.dbHelper.saveUser(userObj)
 	
@@ -130,47 +139,104 @@ class Question(object):
 	def __init__(self):
 		pass
 	def toInsertSQl(self):
-		pass
+		strSQL="insert into flow_question (questionid,title,content,tag,tags,userid,view_count,answer_count,comment_count,favorite_count, \
+			score,accepted_answer_id,create_time,last_time) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)" 
+		#print str_SQL
+		#strSQL="insert into flow_question(questionid,title,content,tag,tags,userid,view_count,answer_count,comment_count,favorite_count, \
+		#	score,accepted_answer_id,create_time,last_time) values (%d,%s,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%s,%s)"
+		#print strSQL
+		return strSQL
 
 class Answer(object):
 	def __init__(self):
 		pass
 	def toInsertSQl(self):
-		pass
+		strSQL="insert into flow_answer (answerid,questionid,content,userid,comment_count,is_accepted,score,create_time,last_time) \
+				values (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+		#print strSQL
+		return strSQL
 
 class Comment(object):
 	def __init__(self):	
 		pass
 	def toInsertSQl(self):
-		pass
+		strSQL="insert into flow_comment (commentid,userid,content,score,create_time,postid,of_question,questionid,answerid) \
+				values (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+		#print strSQL
+		return strSQL
 
 class User(object):
 	def __init__(self):	
 		pass
 	def toInsertSQl(self):
-		pass
+		strSQL="insert into flow_user (userid,reputation,accept_rate,is_employee,bronze,silver,gold) \
+				values (%s,%s,%s,%s,%s,%s,%s)" 
+		#print strSQL
+		return strSQL
 
 class DBhelper(object):
 	def __init__(self,dbtype="mysql",dbname="crawler"):
-		self.db=MySQLdb.connect("localhost","hello","test1234",dbname)
+		self.db=MySQLdb.connect("localhost","hello","test1234",dbname,charset="utf8")
+		self.cursor=self.db.cursor()
 		self.logFile=open("/home/kliosvseyy/database_log.txt","a+")
 
 	def saveQuestion(self,question):
-		self.logFile.write("write a question"+"\n")
+		self.logFile.write("write a question\t"+str(question.id)+"\n")
+		if self.hasQuestion(question.id)==False:
+			self.cursor.execute(question.toInsertSQl(),(question.id,question.title,question.body,question.tag,
+				",".join(question.tags),question.user_id,question.view_count,question.answer_count,question.comment_count,
+			 	question.favorite_count,question.score,question.accepted_answer_id,question.create_time,question.last_time))
+			self.db.commit()
 	def saveAnswer(self,answer):
-		self.logFile.write("write a answer"+"\n")
+		self.logFile.write("write a answer\t"+str(answer.id)+"\n")
+		if self.hasAnswer(answer.id)==False:
+			self.cursor.execute(answer.toInsertSQl(),((answer.id,answer.question_id,answer.body,answer.user_id,answer.comment_count,
+				answer.is_accepted,answer.score,answer.create_time,answer.last_time)))
+			self.db.commit()
 	def saveComment(self,comment):
-		self.logFile.write("write a comment"+"\n")
+		self.logFile.write("write a comment\t"+str(comment.id)+"\n")
+		if self.hasComment(comment.id)==False:
+			self.cursor.execute(comment.toInsertSQl(),((comment.id,comment.user_id,comment.body,comment.score,comment.create_time,
+				comment.post_id,comment.of_question,comment.question_id,comment.answer_id)))
+			self.db.commit()
 	def saveUser(self,user):
-		self.logFile.write("write a user"+"\n")
-	def hasQustion(self,question_id):
-		return False
+		self.logFile.write("write a user\t"+str(user.id)+"\n")
+		if self.hasUser(user.id)==False:
+			self.cursor.execute(user.toInsertSQl(),((user.id,user.reputation,user.accept_rate,user.is_employee,user.bronze,user.silver,user.gold)))
+			self.db.commit()
+
+	def hasQuestion(self,question_id):
+		count=self.cursor.execute("select * from flow_question where questionid=%d" % (question_id))
+		if int(count)==0:
+			return False
+		else:
+			return True
+
 	def hasAnswer(self,answer_id):
-		return False
+		count=self.cursor.execute("select * from flow_answer where answerid=%d" % (answer_id))
+		if int(count)==0:
+			return False
+		else:
+			return True
+
 	def hasUser(self,user_id):
-		return False
+		count=self.cursor.execute("select * from flow_user where userid=%d" % (user_id))
+		if int(count)==0:
+			return False
+		else:
+			return True
+
 	def hasComment(self,comment_id):
-		return False
+		count=self.cursor.execute("select * from flow_comment where commentid=%d" % (comment_id))
+		if int(count)==0:
+			return False
+		else:
+			return True
+
 	def close():
+		self.cursor.close()
 		self.db.close()	
 		self.logFile.close()
+
+def changeTSMP2Date(timeStamp):
+	return datetime.datetime.fromtimestamp(timeStamp).strftime('%Y-%m-%d %H:%M:%S')
