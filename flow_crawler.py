@@ -181,30 +181,37 @@ class DBhelper(object):
 		self.logFile=open("/home/kliosvseyy/database_log.txt","a+")
 
 	def saveQuestion(self,question):
-		self.logFile.write("write a question\t"+str(question.id)+"\n")
-		if self.hasQuestion(question.id)==False:
-			self.cursor.execute(question.toInsertSQl(),(question.id,question.title,question.body,question.tag,
-				",".join(question.tags),question.user_id,question.view_count,question.answer_count,question.comment_count,
-			 	question.favorite_count,question.score,question.accepted_answer_id,question.create_time,question.last_time))
-			self.db.commit()
+		try:
+			if self.hasQuestion(question.id)==False:
+				self.cursor.execute(question.toInsertSQl(),(question.id,question.title,question.body,question.tag,
+					",".join(question.tags),question.user_id,question.view_count,question.answer_count,question.comment_count,
+				 	question.favorite_count,question.score,question.accepted_answer_id,question.create_time,question.last_time))
+				self.db.commit()
+		except:
+			self.logFile.write("write a question\t"+str(question.id)+"\n")
 	def saveAnswer(self,answer):
-		self.logFile.write("write a answer\t"+str(answer.id)+"\n")
-		if self.hasAnswer(answer.id)==False:
-			self.cursor.execute(answer.toInsertSQl(),((answer.id,answer.question_id,answer.body,answer.user_id,answer.comment_count,
-				answer.is_accepted,answer.score,answer.create_time,answer.last_time)))
-			self.db.commit()
+		try:
+			if self.hasAnswer(answer.id)==False:
+				self.cursor.execute(answer.toInsertSQl(),((answer.id,answer.question_id,answer.body,answer.user_id,answer.comment_count,
+					answer.is_accepted,answer.score,answer.create_time,answer.last_time)))
+				self.db.commit()
+		except:
+			self.logFile.write("write a answer\t"+str(answer.id)+"\n")
 	def saveComment(self,comment):
-		self.logFile.write("write a comment\t"+str(comment.id)+"\n")
-		if self.hasComment(comment.id)==False:
-			self.cursor.execute(comment.toInsertSQl(),((comment.id,comment.user_id,comment.body,comment.score,comment.create_time,
-				comment.post_id,comment.of_question,comment.question_id,comment.answer_id)))
-			self.db.commit()
+		try:
+			if self.hasComment(comment.id)==False:
+				self.cursor.execute(comment.toInsertSQl(),((comment.id,comment.user_id,comment.body,comment.score,comment.create_time,
+					comment.post_id,comment.of_question,comment.question_id,comment.answer_id)))
+				self.db.commit()
+		except:
+			self.logFile.write("write a comment\t"+str(comment.id)+"\n")
 	def saveUser(self,user):
-		self.logFile.write("write a user\t"+str(user.id)+"\n")
-		if self.hasUser(user.id)==False:
-			self.cursor.execute(user.toInsertSQl(),((user.id,user.reputation,user.accept_rate,user.is_employee,user.bronze,user.silver,user.gold)))
-			self.db.commit()
-
+		try:
+			if self.hasUser(user.id)==False:
+				self.cursor.execute(user.toInsertSQl(),((user.id,user.reputation,user.accept_rate,user.is_employee,user.bronze,user.silver,user.gold)))
+				self.db.commit()
+		except:
+			self.logFile.write("write a user\t"+str(user.id)+"\n")
 	def hasQuestion(self,question_id):
 		count=self.cursor.execute("select * from flow_question where questionid=%d" % (question_id))
 		if int(count)==0:
@@ -233,7 +240,7 @@ class DBhelper(object):
 		else:
 			return True
 
-	def close():
+	def close(self):
 		self.cursor.close()
 		self.db.close()	
 		self.logFile.close()
