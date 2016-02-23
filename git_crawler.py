@@ -13,7 +13,7 @@ class GitCrawler(object):
 		self.baseUrl="https://api.github.com/repos/"+user+'/'+repo+'/'+term
 		self.logFile=open("/Users/yangyong/git_log.txt","a+")
 
-	def startCrawler(self,page=1,pagesize=10):
+	def startCrawler(self,page=1,pagesize=100):
 		flag=True
 		while flag:
 			flag=self.crawlIssues(page,pagesize)
