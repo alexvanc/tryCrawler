@@ -88,6 +88,11 @@ class DBHelper(object):
 			return False
 		else:
 			return True
+	def close(self):
+		self.cursor.close()
+		self.db.close()	
+		self.logFile.close()
+		
 def changeTSMP2Date(isodate):
 	if isodate=='' or isodate==None:
 		return None
