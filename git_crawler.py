@@ -5,7 +5,6 @@ import MySQLdb
 from StringIO import StringIO
 import gzip
 import json
-import iso8601
 import datetime
 
 class GitCrawler(object):
@@ -40,7 +39,7 @@ class GitCrawler(object):
 			issue.label=[]
 			for l in tempLables:
 				issue.label.append(l.get('name',''))
-			issue.createDate=changeTSMP2Datez(i.get('created_at',''))
+			issue.createDate=changeTSMP2Date(i.get('created_at',''))
 			issue.closeDate=changeTSMP2Date(i.get('closed_at',''))
 			self.dbHelper.saveIssue(issue);
 		if counter==pagesize:
@@ -75,14 +74,13 @@ class DBHelper(object):
 		self.logFile=open("/Users/yangyong/database_log.txt","a+")
 
 	def saveIssue(self,issue):
-		# try:
-		if self.hasIssue(issue.id)==False:
-			self.cursor.execute(issue.toInsertSQL(),(issue.id,issue.title,issue.content,issue.state,issue.commentNumber,
-				",".join(issue.label),issue.createDate,issue.closeDate))
-			self.db.commit()
-		# except:
-		# 	self.logFile.write("write a issue\t"+str(issue.id)+"\n")
-		# pass
+		try:
+			if self.hasIssue(issue.id)==False:
+				self.cursor.execute(issue.toInsertSQL(),(issue.id,issue.title,issue.content,issue.state,issue.commentNumber,
+					",".join(issue.label),issue.createDate,issue.closeDate))
+				self.db.commit()
+		except:
+			self.logFile.write("write a issue\t"+str(issue.id)+"\n")
 
 	def hasIssue(self,issueid):
 		count=self.cursor.execute("select * from git_issue where issueid=%d" % (issueid))
@@ -91,7 +89,7 @@ class DBHelper(object):
 		else:
 			return True
 def changeTSMP2Date(isodate):
-	if isodate=='':
-		return ''
+	if isodate=='' or isodate==None:
+		return None
 	else:
-		return iso8601.parse_date(isodate).strftime('%Y-%m-%d %H:%M:%S')		
+		return datetime.datetime.strptime(isodate,"%Y-%m-%dT%H:%M:%SZ").strftime('%Y-%m-%d %H:%M:%S')
