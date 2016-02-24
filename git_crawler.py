@@ -35,7 +35,7 @@ class GitCrawler(object):
 			issue.content=i.get('body','')
 			issue.commentNumber=i.get('comments',-10000)
 			issue.state=i.get('state','')
-			tempLables=i.get('lables',[])
+			tempLables=i.get('labels',[])
 			issue.label=[]
 			for l in tempLables:
 				issue.label.append(l.get('name',''))
@@ -92,7 +92,7 @@ class DBHelper(object):
 		self.cursor.close()
 		self.db.close()	
 		self.logFile.close()
-		
+
 def changeTSMP2Date(isodate):
 	if isodate=='' or isodate==None:
 		return None
