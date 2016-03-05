@@ -14,11 +14,11 @@ class GroupCrawler(SGMLParser):
 		self.dbHelper= DBhelper(dbtype,dbname)
 		self.keyword=keyword
 		#根据一个基本的群组信息网页来抓取其他数据
-		baseFile=open("/Users/yangyong/Downloads/docker-user.html","r")
+		baseFile=open("/home/kliosvseyy/Downloads/docker-user.html","r")
 		self.baseContent=baseFile.read()
 		baseFile.close()
 		self.baseUrl='https://groups.google.com/forum/#!topic/docker-user/'
-		self.logFile=open("/Users/yangyong/group_user_log.txt","a+")
+		self.logFile=open("/home/kliosvseyy/group_user_log.txt","a+")
 
 		self.inNumberSpan=0
 		self.inAnthorDiv=False
@@ -102,28 +102,55 @@ class GroupCrawler(SGMLParser):
 			try:
 				for item in result:
 					counter=counter+1
-					if (re.match(r'[a-zA-Z0-9_-]{12}', item) and (len(item)==12 or item[12]=='"')) or (item=='6m'):
+					# if (re.match(r'([a-zA-Z0-9]|(_|-)){12}', item) and (len(item)==12 or item[12]=='"')) or (item=='6m'):
+					# 	# print item
+					# 	if len(item)!=12 and item!='6m':
+					# 		# print 'hehe'
+					# 		item=item.split('"')[0]
+					# 	if pCounter==0:
+					# 		pCounter=1
+					# 		currentPassage.content=result[counter]
+					# 	elif pCounter==1:
+					# 		pCounter=2
+					# 		currentPassage.passageID=item
+					# 		self.dbHelper.savePassage(currentPassage)
+					# 		currentPassage.content=result[counter+1]
+					# 	elif pCounter==2:
+					# 		pCounter=3
+					# 		currentPassage.passageID=item
+					# 		self.dbHelper.savePassage(currentPassage)
+					# 		currentPassage.content=result[counter+1]
+					# 	elif pCounter==3:
+					# 		currentPassage.passageID=item
+					# 		self.dbHelper.savePassage(currentPassage)
+					# 		currentPassage.content=result[counter]
+					# 	else:
+					# 		print "A problem "+rawTopicID+" "+item
+					if (re.match(r'([a-zA-Z0-9]|(_|-)){12}', item) and (len(item)==12 or item[12]=='"')) or (item=='6m'):
 						# print item
 						if len(item)!=12 and item!='6m':
 							# print 'hehe'
 							item=item.split('"')[0]
 						if pCounter==0:
 							pCounter=1
-							currentPassage.content=result[counter]
+							currentPassage.content=result[counter]#to get the content of the first message
 						elif pCounter==1:
-							pCounter=2
 							currentPassage.passageID=item
-							self.dbHelper.savePassage(currentPassage)
-							currentPassage.content=result[counter+1]
-						elif pCounter==2:
-							pCounter=3
-							currentPassage.passageID=item
-							self.dbHelper.savePassage(currentPassage)
-							currentPassage.content=result[counter+1]
-						elif pCounter==3:
-							currentPassage.passageID=item
-							self.dbHelper.savePassage(currentPassage)
-							currentPassage.content=result[counter]
+
+							#find the author
+							if re.match(r'[0-9]{21}',result[counter-2]):
+								currentPassage.author=result[counter-3]
+							elif result[counter-2].find('@')!=-1:
+								currentPassage.author=''
+							else:
+								currentPassage.author=result[counter-2]
+
+							self.dbHelper.savePassage(currentPassage)	
+							#find the content of the next passage
+							if result[counter]=='3e' or result.find('Re:')==1:
+								currentPassage.content=result[counter+1]
+							else:
+								currentPassage.content=result[counter]
 						else:
 							print "A problem "+rawTopicID+" "+item
 			except:
@@ -200,7 +227,7 @@ class Passage(object):
 		self.topicID=topicID
 
 	def toInsertSQl(self):
-		strSQL="insert into guser_passage(topicid,passageid,content) values (%s,%s,%s)"
+		strSQL="insert into guser_passage(topicid,passageid,content,author) values (%s,%s,%s,%s)"
 		return strSQL
 		
 
@@ -210,7 +237,7 @@ class DBhelper(object):
 	def __init__(self,dbtype="mysql",dbname="crawler"):
 		self.db=MySQLdb.connect("localhost","hello","test1234",dbname,charset="utf8")
 		self.cursor=self.db.cursor()
-		self.logFile=open("/Users/yangyong/database_log.txt","a+")
+		self.logFile=open("/home/kliosvseyy/database_log.txt","a+")
 
 	def saveTopic(self,topic):
 		try:
@@ -225,7 +252,7 @@ class DBhelper(object):
 		# print passage.passageID
 		try:
 			if self.hasPassage(passage.passageID)==False:
-				self.cursor.execute(passage.toInsertSQl(),(passage.topicID,passage.passageID,passage.content))
+				self.cursor.execute(passage.toInsertSQl(),(passage.topicID,passage.passageID,passage.content,passage.author))
 				self.db.commit()
 				print 'finish',passage.passageID
 		except:

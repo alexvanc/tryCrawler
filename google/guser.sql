@@ -16,5 +16,6 @@ create table `guser_passage`(
 `topicid` varchar(128) NOT NULL,
 `passageid` varchar(128) NOT NULL UNIQUE,
 `content` text,
+`author` varchar(255),
 primary key(`id`)
 ) ENGINE=InnoDB Default charset=utf8;
