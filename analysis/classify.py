@@ -3,11 +3,19 @@
 import re
 from collections import Counter
 import MySQLdb
-import apriori
 
+
+testDict={'docker':['go','run','daemon','api','boot','exec','engine','expose','log','config','configuration','lxc',' restart','  isolation',' permission',' permissions',' layer','bridge','linked','link','attach','priviledged','security','bind',' overlay',' mapping',' status','dns','devie',' network','networks','map','archive','snaphost',' qemu'],
+			'os':['bash','commandline','cmd','ubuntu','linux','system','root','windows','shell','address','apt','sudo','kernel','filesystem','memory','pid','debian','storage','mounted','library','space','os','mac','sock','top','cpu','hostname','namespace','unix','iptables','resources','coreos','systemd','centos','socket',' devicemapper','chmod',' yum',' fedora','redhat','vivid','cgroup','photon','atomic'],
+			'orchestration':['swarm','compose','	machine','nginx','kurbernetes','driver','drivers','distribution','mesos','mesosphere','cluster','zookeeper','orchestration'],
+			'platform':['amazon','aws','google','heroku','dotcloud','tutum','azure','ec2'],
+			'image':['pull','image','images','build','builds','run','dockerfile','add','regitry','hub','exec','service','entrypoint','inspect','commit',' tag','show','export','repository','delete','baseimage','entrypoin'],
+			'application':['web','virtualbox','apache','git','python','posgres','db','php','database',' java','tomcat','posgresql','maven','mongo','mongodb','node.js','busybox','wordpress','pip','jar',' elasticseatch','rabbitmq','toolbox','sql','cassandra'],
+			'other':['tcp','varialbles','redis','stack','tmp','supervisor','virtual','json','output','setup','production','curl','interface','launch','debug','discovery','package','backup','depolyment','download','deploy',' admin',' virtualization','weave']}
+resultlist=[0,0,0,0,0,0,0]
 # print 'Words in text:', len(word_list)
 
-# #delete stop words  like "a,the,that"
+# #delete stop words like "a,the,that"
 # def delStopWords():
 # 	pass
 
@@ -48,11 +56,10 @@ class SourceAnalyzer(object):
 			results=self.dbHelper.getContent(self.source, False, pagesize)
 		else:
 			results=self.dbHelper.getContent(self.source, True, pagesize)
-		freq_dict={}
 		for result in results:
-			freq_dict=self.mergeDicts(freq_dict,self.preprocess(result))
-		self.sortAndPrint(freq_dict, limit)
+			self.split(result)
 
+		print resultlist
 	def startAnalyzerWithSQL(self,limit,SQL):
 		
 		results=self.dbHelper.excuteSQL(SQL)
@@ -61,24 +68,6 @@ class SourceAnalyzer(object):
 			freq_dict=self.mergeDicts(freq_dict,self.preprocess(result))
 		self.sortAndPrint(freq_dict, limit)
 
-	#用于挖掘频繁项集
-	def startAprioriWithSQL(self,limit,SQL):
-		resultDict=self.dbHelper.getDictBySQL(SQL)
-		# dataDict={}
-		# print resultDict
-		for k,v in resultDict.items():
-			resultDict[k]=self.split(v)
-
-		# print resultDict
-		tool=apriori.Apriori(dataDic=resultDict)
-		result=tool.do()
-		# print result
-		for item in result:
-			if len(item)>=2:
-				print item
-		# for k,v in result.items():
-		# 	if v>=2:
-		# 		print k
 
 	def split(self,text):
 		punctuation = re.compile(r'[.?!,":;>()/\[\]\-_&\'+=`#{}<>]|[0-9]+') 
@@ -86,12 +75,37 @@ class SourceAnalyzer(object):
 		word_list = re.split('\s+', text.lower())
 		# print word_list
 		counter=0
+		templist=[0,0,0,0,0,0,0,0]
 		for word in word_list:
 			if word in self.stopWords:
 				del word_list[counter]
+			else:
+				index=self.predictword(word)
+				# print index
+				templist[index]+=1
 			counter+=1
 		# print word_list
+
+		maxNum=templist[0]
+		maxindex=0
+		for index in xrange(0,7):
+			if templist[index]>maxNum:
+				maxNum=templist[index]
+				maxindex=index
+
+		resultlist[maxindex]+=1
 		return word_list
+
+	def predictword(self,word):
+		# templist=[0,0,0,0,0,0,0]
+		counter=0;
+		for k,v in testDict.items():
+			if word in v:
+				# print 'heeh'
+				return counter
+			counter+=1
+		return 7
+
 
 	def sortAndPrint(self,freq_dic,limit):
 		freq_list=sorted(freq_dic.items(),key=lambda d:d[1], reverse=True)
@@ -141,41 +155,17 @@ class DBHelper(object):
 		strSQL=''
 		if source=='overflow':
 			temp=','.join(ouser)
-			# sql1="select title,content from flow_question where create_time>'2016-01-01' and create_time<'2017-01-01' "
-			# sql2="select content from flow_answer where create_time>'2016-01-01' and create_time<'2017-01-01' "
-			# sql3="select content from flow_comment where create_time>'2016-01-01' and create_time<'2017-01-01' "
 			
-
-			# sql1="select title,content from flow_question where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-			# sql2="select content from flow_answer where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-			# sql3="select content from flow_comment where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-
-			sql1="select title,content from flow_question where userid IN (select t.userid from(select * from flow_user order by reputation desc limit 10)as t)"
-			sql2="select content from flow_answer where userid IN (select t.userid from(select * from flow_user order by reputation desc limit 10)as t)"
-			sql3="select content from flow_comment where userid IN (select t.userid from(select * from flow_user order by reputation desc limit 10)as t)"
-			# if isLimited:
-			# 	sql1+='limit '+str(number)
-			# 	sql2+='limit '+str(number)
-			# 	sql3+='limit '+str(number)
+			sql1="select title,content from flow_question"
+			
 			self.cursor.execute(sql1)
 			tempResult=self.cursor.fetchall()
 			for result in tempResult:
 				results.append(result[0]+' '+result[1])
-			self.cursor.execute(sql2)
-			tempResult=self.cursor.fetchall()
-			for result in tempResult:
-				results.append(result[0])
-			self.cursor.execute(sql3)
-			tempResult=self.cursor.fetchall()
-			for result in tempResult:
-				results.append(result[0])
+			
 			return results
 		elif source=='github':
-			temp=",".join(gituser)
-			# sql1="select title ,content from git_issue where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-			# sql2="select content from git_comment where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-			sql1="select title ,content from git_issue where userid IN (select t.userid from(select * from git_user order by followers desc limit 10)as t)"
-			sql2="select content from git_comment where userid IN (select t.userid from(select * from git_user order by followers desc limit 10)as t)"
+			sql1="select title ,content from git_issue"
 			self.cursor.execute(sql1)
 			tempResult=self.cursor.fetchall()
 			for result in tempResult:
@@ -184,24 +174,13 @@ class DBHelper(object):
 				else:
 					results.append(result[0]+" "+result[1])
 
-			self.cursor.execute(sql2)
-			tempResult2=self.cursor.fetchall()
-			for result2 in tempResult2:
-				results.append(result2[0])
 			return results
 		elif source=='google':
-			temp ="', '".join(guser)
-			temp="'"+temp+"'"
-			sql1="select content,topicid from google_topic where author IN (%s) and lasttime>='%s' and lasttime<'%s'" %(temp,'2016-01-01','2017-01-01') 
+			sql1="select content,topicid from guser_topic"
 			self.cursor.execute(sql1)
 			tempResult=self.cursor.fetchall()
 			for result in tempResult:
 				results.append(result[0])
-				sql2="select content from google_passage where topicid='%s'" % result[1]
-				self.cursor.execute(sql2)
-				tempResult2=self.cursor.fetchall()
-				for result2 in tempResult2:
-					results.append(result2[0])
 			# print sql1
 			
 			return results
@@ -239,7 +218,7 @@ class DBHelper(object):
 		self.logFile.close()
 		self.db.close()
 
-analyzer=SourceAnalyzer("overflow")
+analyzer=SourceAnalyzer("google")
 analyzer.startAnalyzer(2)
 
 # analyzer=SourceAnalyzer("google")

@@ -7,7 +7,7 @@ import apriori
 
 # print 'Words in text:', len(word_list)
 
-# #delete stop words  like "a,the,that"
+# #delete stop words like "a,the,that"
 # def delStopWords():
 # 	pass
 
@@ -43,11 +43,8 @@ class SourceAnalyzer(object):
 		self.dbHelper=DBHelper()
 		self.stopWords=['com','docker','https','have','the','github','be','could','it','he','a','an','the','this','that','to','in','at','on','of','and','not','with','or','for','by','as','if','when','for','is','from','into','onto','','my','you','']
 
-	def startAnalyzer(self,limit,pagesize=0):
-		if pagesize==0:
-			results=self.dbHelper.getContent(self.source, False, pagesize)
-		else:
-			results=self.dbHelper.getContent(self.source, True, pagesize)
+	def startAnalyzer(self,limit):
+		results=self.dbHelper.getContent(self.source)
 		freq_dict={}
 		for result in results:
 			freq_dict=self.mergeDicts(freq_dict,self.preprocess(result))
@@ -102,6 +99,7 @@ class SourceAnalyzer(object):
 					return
 			except:
 				pass
+
 	# def getTermFromDB(self,pagesize):
 
 		
@@ -136,84 +134,24 @@ class DBHelper(object):
 		self.cursor=self.db.cursor()
 		self.logFile=open("/Users/yangyong/database_log.txt","a+")
 
-	def getContent(self,source,isLimited,number):
+	def getContent(self,source):
 		results=[]
 		strSQL=''
-		if source=='overflow':
-			temp=','.join(ouser)
-			# sql1="select title,content from flow_question where create_time>'2016-01-01' and create_time<'2017-01-01' "
-			# sql2="select content from flow_answer where create_time>'2016-01-01' and create_time<'2017-01-01' "
-			# sql3="select content from flow_comment where create_time>'2016-01-01' and create_time<'2017-01-01' "
-			
-
-			# sql1="select title,content from flow_question where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-			# sql2="select content from flow_answer where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-			# sql3="select content from flow_comment where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-
-			sql1="select title,content from flow_question where userid IN (select t.userid from(select * from flow_user order by reputation desc limit 10)as t)"
-			sql2="select content from flow_answer where userid IN (select t.userid from(select * from flow_user order by reputation desc limit 10)as t)"
-			sql3="select content from flow_comment where userid IN (select t.userid from(select * from flow_user order by reputation desc limit 10)as t)"
-			# if isLimited:
-			# 	sql1+='limit '+str(number)
-			# 	sql2+='limit '+str(number)
-			# 	sql3+='limit '+str(number)
-			self.cursor.execute(sql1)
-			tempResult=self.cursor.fetchall()
-			for result in tempResult:
-				results.append(result[0]+' '+result[1])
-			self.cursor.execute(sql2)
-			tempResult=self.cursor.fetchall()
-			for result in tempResult:
-				results.append(result[0])
-			self.cursor.execute(sql3)
-			tempResult=self.cursor.fetchall()
-			for result in tempResult:
-				results.append(result[0])
-			return results
-		elif source=='github':
-			temp=",".join(gituser)
-			# sql1="select title ,content from git_issue where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-			# sql2="select content from git_comment where userid IN (%s) and create_time>'%s' and create_time<'%s'" % (temp,'2013-01-01','2014-01-01')
-			sql1="select title ,content from git_issue where userid IN (select t.userid from(select * from git_user order by followers desc limit 10)as t)"
-			sql2="select content from git_comment where userid IN (select t.userid from(select * from git_user order by followers desc limit 10)as t)"
-			self.cursor.execute(sql1)
-			tempResult=self.cursor.fetchall()
-			for result in tempResult:
-				if result[0] is None or result[1] is None:
-					results.append(" "+" "+" ")
-				else:
-					results.append(result[0]+" "+result[1])
-
-			self.cursor.execute(sql2)
-			tempResult2=self.cursor.fetchall()
-			for result2 in tempResult2:
-				results.append(result2[0])
-			return results
-		elif source=='google':
-			temp ="', '".join(guser)
-			temp="'"+temp+"'"
-			sql1="select content,topicid from google_topic where author IN (%s) and lasttime>='%s' and lasttime<'%s'" %(temp,'2016-01-01','2017-01-01') 
-			self.cursor.execute(sql1)
-			tempResult=self.cursor.fetchall()
-			for result in tempResult:
-				results.append(result[0])
-				sql2="select content from google_passage where topicid='%s'" % result[1]
-				self.cursor.execute(sql2)
-				tempResult2=self.cursor.fetchall()
-				for result2 in tempResult2:
-					results.append(result2[0])
-			# print sql1
-			
-			return results
-		else:
-			strSQL='select title,content from flow_question '
-
-		if isLimited:
-			strSQL+='limit '+str(number)
-		self.cursor.execute(strSQL)
+		temp=",".join(gituser)
+		sql1="select title ,content from git_issue where userid IN (select userid from git_user where company like '%%%s%%')" % source
+		sql2="select content from git_comment where userid IN (select userid from git_user where company like '%%%s%%')" % source
+		self.cursor.execute(sql1)
 		tempResult=self.cursor.fetchall()
 		for result in tempResult:
-			results.append(result[0])
+			if result[0] is None or result[1] is None:
+				results.append(" "+" "+" ")
+			else:
+				results.append(result[0]+" "+result[1])
+
+		self.cursor.execute(sql2)
+		tempResult2=self.cursor.fetchall()
+		for result2 in tempResult2:
+			results.append(result2[0])
 		return results
 
 	def excuteSQL(self,SQL):
@@ -239,8 +177,8 @@ class DBHelper(object):
 		self.logFile.close()
 		self.db.close()
 
-analyzer=SourceAnalyzer("overflow")
-analyzer.startAnalyzer(2)
+analyzer=SourceAnalyzer("google")
+analyzer.startAnalyzer(4)
 
 # analyzer=SourceAnalyzer("google")
 # analyzer.startAnalyzerWithSQL(160,"select content from git_comment where create_time>'2016-01-01' and create_time<'2017-01-01'")
@@ -251,7 +189,7 @@ analyzer.startAnalyzer(2)
 
 
 # analyzer=SourceAnalyzer("google")
-# analyzer.startAprioriWithSQL(160,"select id, content from google_passage limit 500")
+# analyzer.startAprioriWithSQL(160,"select id,content from git_comment limit 50")
 		
 # # create list of (key, val) tuple pairs
 # freq_list = freq_dic.items()

@@ -23,11 +23,11 @@ class GroupCrawler(SGMLParser):
 		self.dbHelper= DBhelper(dbtype,dbname)
 		self.keyword=keyword
 		#根据一个基本的群组信息网页来抓取其他数据
-		baseFile=open("/home/kliosvseyy/docker-dev.html","r")
+		baseFile=open("/Users/yangyong/Downloads/docker-dev.html","r")
 		self.baseContent=baseFile.read()
 		baseFile.close()
 		self.baseUrl='https://groups.google.com/forum/#!topic/docker-dev/'
-		self.logFile=open("/home/kliosvseyy/group_log.txt","a+")
+		self.logFile=open("/Users/yangyong/group_log.txt","a+")
 
 		self.inNumberSpan=0
 		self.inAnthorDiv=False
@@ -153,7 +153,10 @@ class GroupCrawler(SGMLParser):
 
 							#find the author
 							if re.match(r'[0-9]{21}',result[counter-2]):
-								currentPassage.author=result[counter-3]
+								if result[counter-3].find('@')!=-1:
+									currentPassage.author=""
+								else:
+									currentPassage.author=result[counter-3]
 							elif result[counter-2].find('@')!=-1:
 								currentPassage.author=''
 							else:
@@ -177,6 +180,7 @@ class GroupCrawler(SGMLParser):
 		# print self.baseUrl+self.currentTopic.processID()
 
 	def getContent(self,rawTopicID):
+		print rawTopicID
 		cookie='HSID=AdGSDjh9xahk54Lcs; SSID=Al72IXcOZsk98Uu8k; APISID=mHn9H2F1BVKrl4ed/AOOezNf0ZMz_4dlcH; SAPISID=ItlgSLJ1tffOzPlL/AVy2KrJVRBLwPYNuL; groupsloginpref=aEiIwOuxfzdCmLZe4oB1JsBmCUxwG8x-u-HBCV9JT8E=kliosvseyy@gmail.com; NID=77=IZD8o02E6Wqt1GBvjk2_Ey8isHOixg4oAFoXq_P04_9P3yl1RS0DhBQDF1dj-wTkoSBSs4LcRw7lAI_t0oybIrLZMTVwfmxNlNXEHmhhag2zsdJVpnjFfu3TztElehNy2KSyKcJLqob0hK1Am6Fy0o12HaJ47lwfCi54RSAVDhyh7mDjAQxdL1_3bTLXbXWON2lSF_FECA; SID=DQAAACQBAAD8yuIrg0DmZRtZ18_83TFt0qt1c6DrqzT0d0nqfXFazLTR7Fv6BEUu-mOkOXuz1SCH6xrqZ3mxytp1u9KCbSa3US_HTbb_PER-fOf9ov0hA8PJPfwrQZjKtl5oGI0J5euMGeAoSrCxPd0uAFPi6PeV6jwIXOv_2cP3luhB2AR74hAhj-cv_9wl2qdJC2TwI0nWUgK4zDnY_NzV4PX8dS2owUylHiRDFhi2eLmPNKmFVjhh6arqOAduv0CwXAAoWwRfSFFY3Zz60Q2Wd7IxCb8R1_38L2zcQRCAUCs58tEvOM04Fu0vMcXA4NAUPkMCJr83lrvX4w3EW4_o3KvOYlgEs0rHvp9Ff2wQhf_XoyoD2TXCr9mLIPKRMX9WMjjuOC--4vAb3OvSoelTIy08omuY; __utmt_*groups_ga*=1; __utma=118165087.1320653427.1449388955.1457079225.1457079225.38; __utmb=118165087.5.10.1457079225; __utmc=118165087; __utmz=118165087.1456561832.21.11.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided)'
 			   # 'HSID=AdGSDjh9xahk54Lcs; SSID=Al72IXcOZsk98Uu8k; APISID=mHn9H2F1BVKrl4ed/AOOezNf0ZMz_4dlcH; SAPISID=ItlgSLJ1tffOzPlL/AVy2KrJVRBLwPYNuL; groupsloginpref=aEiIwOuxfzdCmLZe4oB1JsBmCUxwG8x-u-HBCV9JT8E=kliosvseyy@gmail.com; NID=77=g4pFnCuQaAMB9cUHB-hPdFaB5O9gI7YD-wpjH_JcXAZEDcID5ZWw04GhlEgkRSYjoBgKIWaMRm9VRm7RMjUGveLrCR2JziKVE2-wqnq_WikjQo7SpvA52NtVlU1oVgmxXK-OQ9fV7B6uj5bvTNSKL-UNIydm6fwyi4USFj23sCpNHNjTHPYBQbGM0ki5DNdKaqIIszPmAg; __utmt_*groups_ga*=1; __utma=118165087.1320653427.1449388955.1456552915.1456552915.20; __utmb=118165087.7.10.1456552915; __utmc=118165087; __utmz=118165087.1456404404.14.10.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); SID=DQAAACQBAAD8yuIrg0DmZRtZ18_83TFtVQkUinEke0Swerg_D6TlJLsSrwNdsoln5RbDVf71zsYISfOSUc8sBNed-4SPjp0sVeXIZX9QnLk8V5RbLo7QTLXTMvkYYhRlNsgmgLh0pfIzJGe5zNZnix3i6PTTtZf6Lvlr1oCfpksnlJYgV7MhfzuysHRYstQmxRQcqnPttBbeHkgMbjzD6SqYOvq3-6O7FKgM78BLzU-kwG7hmETt-cuaHuqCXNIaE1D4HbjXl9WQd_fyATDzgJl8iFFcwHdFTKMhKKI3lowkLT3sFE8rMLP2KdpYvO0sJpLmfRbeeLSXj1LGNRj9p_JoXUOSB-pQ09XdTsicuAtPeGWMLE4U3MiaAD9gj_mfiNCaB9NRjvEgIDC9M7cB_KnD0Ha_6j5t'
 		self.baseUrl='https://groups.google.com/forum/msg_bkg?appversion=1&hl=zh-CN&authuser=0'
@@ -193,7 +197,7 @@ class GroupCrawler(SGMLParser):
 		'x-gwt-permutation':'A8FD84F96C3D2B0F704D3F34BA70A8D4'
 		}
 		# postdata='7|3|15|https://groups.google.com/forum/|D3EC77A6D699DC80502787E6A345082A|6p|AKUva6rhtAgyNPer3YjBgwZSMSe11-eK4g:1456556335287|_|getMessagesAndExtraInfoForTopics|k|5u|6y|Z|2i|docker-dev|6h|18|%s|1|2|3|4|5|6|6|7|8|9|10|11|10|7|12|12|0|0|13|14|500|0|15|0|0|0|0|' % (rawTopicID)
-		postdata='7|3|15|https://groups.google.com/forum/|D3EC77A6D699DC80502787E6A345082A|6p|AJhRqfEvRE7xoHYRvHJn3ybl027ZR4Vbnw:1457079221666|_|getMessagesAndExtraInfoForTopics|k|5u|6y|Z|2i|docker-dev|6h|18|%s|1|2|3|4|5|6|6|7|8|9|10|11|10|7|12|12|0|0|13|14|500|0|15|0|0|0|0|' % (rawTopicID)
+		postdata='7|3|15|https://groups.google.com/forum/|D3EC77A6D699DC80502787E6A345082A|6p|AJhRqfEqjlP6WaRPY-mQ3JCXQSXIkwWjhQ:1457241820258|_|getMessagesAndExtraInfoForTopics|k|5u|6y|Z|2i|docker-dev|6h|18|%s|1|2|3|4|5|6|6|7|8|9|10|11|10|7|12|12|0|0|13|14|500|0|15|0|0|0|0|' % (rawTopicID)
 
 		request=urllib2.Request(self.baseUrl,data=postdata,headers=myheaders)
 		# request.add_data(urllib.urlencode(postdata))
@@ -261,9 +265,9 @@ class Passage(object):
 
 class DBhelper(object):
 	def __init__(self,dbtype="mysql",dbname="crawler"):
-		self.db=MySQLdb.connect("localhost","hello","test1234",dbname,charset="utf8")
+		self.db=MySQLdb.connect("10.0.0.23","hello","test1234",dbname,charset="utf8")
 		self.cursor=self.db.cursor()
-		self.logFile=open("/home/kliosvseyy/database_log.txt","a+")
+		self.logFile=open("/Users/yangyong/database_log.txt","a+")
 
 	def saveTopic(self,topic):
 		# try:

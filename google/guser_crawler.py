@@ -14,11 +14,11 @@ class GroupCrawler(SGMLParser):
 		self.dbHelper= DBhelper(dbtype,dbname)
 		self.keyword=keyword
 		#根据一个基本的群组信息网页来抓取其他数据
-		baseFile=open("/home/kliosvseyy/Downloads/docker-user.html","r")
+		baseFile=open("/Users/yangyong/Downloads/docker-user.html","r")
 		self.baseContent=baseFile.read()
 		baseFile.close()
 		self.baseUrl='https://groups.google.com/forum/#!topic/docker-user/'
-		self.logFile=open("/home/kliosvseyy/group_user_log.txt","a+")
+		self.logFile=open("/Users/yangyong/group_user_log.txt","a+")
 
 		self.inNumberSpan=0
 		self.inAnthorDiv=False
@@ -94,7 +94,7 @@ class GroupCrawler(SGMLParser):
 		elif self.dbHelper.hasTopic(rawTopicID)==True:
 			pass
 		else:
-			# print rawTopicID
+			print rawTopicID
 			pCounter=0
 			counter=0
 			currentPassage=Passage(rawTopicID)
@@ -177,7 +177,7 @@ class GroupCrawler(SGMLParser):
 		'content-type':'text/x-gwt-rpc; charset=UTF-8',
 		'x-gwt-permutation':'223962F3B73B5E26DD33624701419784'
 		}
-		postdata='7|3|15|https://groups.google.com/forum/|D3EC77A6D699DC80502787E6A345082A|6p|AKUva6olU8u8wB7iiHZIcqtgfLZ-pQJksA:1456589710579|_|getMessagesAndExtraInfoForTopics|k|5u|6y|Z|2i|docker-user|6h|18|%s|1|2|3|4|5|6|6|7|8|9|10|11|10|7|12|12|0|0|13|14|500|0|15|0|0|0|0|' % (rawTopicID)
+		postdata='7|3|15|https://groups.google.com/forum/|D3EC77A6D699DC80502787E6A345082A|6p|AJhRqfEqjlP6WaRPY-mQ3JCXQSXIkwWjhQ:1457241820258|_|getMessagesAndExtraInfoForTopics|k|5u|6y|Z|2i|docker-user|6h|18|%s|1|2|3|4|5|6|6|7|8|9|10|11|10|7|12|12|0|0|13|14|500|0|15|0|0|0|0|' % (rawTopicID)
 		request=urllib2.Request(self.baseUrl,data=postdata,headers=myheaders)
 		# request.add_data(urllib.urlencode(postdata))
 		# for k,v in headers:
@@ -185,6 +185,7 @@ class GroupCrawler(SGMLParser):
 		# print self.baseUrl
 		response=urllib2.urlopen(request)
 		result=response.read()
+		response.close()
 
 		result=result.replace('\\x3C','<')
 		result=result.replace('\\x3E','>')
@@ -235,9 +236,9 @@ class Passage(object):
 
 class DBhelper(object):
 	def __init__(self,dbtype="mysql",dbname="crawler"):
-		self.db=MySQLdb.connect("localhost","hello","test1234",dbname,charset="utf8")
+		self.db=MySQLdb.connect("10.0.0.23","hello","test1234",dbname,charset="utf8")
 		self.cursor=self.db.cursor()
-		self.logFile=open("/home/kliosvseyy/database_log.txt","a+")
+		self.logFile=open("/Users/yangyong/database_log.txt","a+")
 
 	def saveTopic(self,topic):
 		try:
